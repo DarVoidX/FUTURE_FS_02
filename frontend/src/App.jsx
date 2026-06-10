@@ -18,15 +18,19 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0A0F1C' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--background-base)' }}>
         <div className="flex flex-col items-center gap-4">
           <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center animate-pulse-slow"
-            style={{ background: 'linear-gradient(135deg, #00E5FF, #7C3AED)', boxShadow: '0 0 30px rgba(0,229,255,0.3)' }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center"
+            style={{ 
+              background: 'linear-gradient(135deg, var(--color-accent), var(--color-teal))', 
+              boxShadow: '0 0 30px var(--color-accent-dim)',
+              animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+            }}
           >
             <span className="text-xl">⚡</span>
           </div>
-          <p className="text-sm" style={{ color: '#94A3B8' }}>Loading OrbitFlow CRM...</p>
+          <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>Loading OrbitFlow CRM...</p>
         </div>
       </div>
     );
@@ -69,20 +73,20 @@ const App = () => {
           toastOptions={{
             duration: 3000,
             style: {
-              background: '#121A2A',
-              color: '#FFFFFF',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--toast-bg)',
+              color: 'var(--toast-text)',
+              border: '1px solid var(--toast-border)',
               borderRadius: '12px',
               fontSize: '14px',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              boxShadow: 'var(--shadow-hover)',
             },
             success: {
-              iconTheme: { primary: '#22C55E', secondary: '#0A0F1C' },
-              style: { borderColor: 'rgba(34,197,94,0.2)' },
+              iconTheme: { primary: 'var(--color-success)', secondary: 'var(--background-white)' },
+              style: { borderColor: 'var(--border-color-medium)' },
             },
             error: {
-              iconTheme: { primary: '#EF4444', secondary: '#0A0F1C' },
-              style: { borderColor: 'rgba(239,68,68,0.2)' },
+              iconTheme: { primary: 'var(--color-danger)', secondary: 'var(--background-white)' },
+              style: { borderColor: 'var(--border-color-medium)' },
             },
           }}
         />

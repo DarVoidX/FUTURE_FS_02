@@ -11,8 +11,8 @@ const SERVICES = [
 ];
 
 const BUDGETS = [
-  'Under $1,000', '$1,000 - $3,000', '$3,000 - $5,000', '$5,000 - $10,000',
-  '$10,000 - $20,000', '$20,000 - $50,000', '$50,000+', 'Not Decided'
+  'Under ₹1,00,000', '₹1,00,000 - ₹3,00,000', '₹3,00,000 - ₹5,00,000', '₹5,00,000 - ₹10,00,000',
+  '₹10,00,000 - ₹25,00,000', '₹25,00,000 - ₹50,00,000', '₹50,00,000+', 'Not Decided'
 ];
 
 const FieldGroup = ({ label, children }) => (
@@ -64,7 +64,7 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
             name="fullName"
             value={form.fullName}
             onChange={handleChange}
-            placeholder="John Smith"
+            placeholder="Aarav Sharma"
             required
           />
         </FieldGroup>
@@ -76,7 +76,7 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
             type="email"
             value={form.email}
             onChange={handleChange}
-            placeholder="john@company.com"
+            placeholder="aarav@company.in"
             required
           />
         </FieldGroup>
@@ -87,7 +87,7 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
             name="phone"
             value={form.phone}
             onChange={handleChange}
-            placeholder="+1 (555) 000-0000"
+            placeholder="+91 98765 43210"
           />
         </FieldGroup>
 
@@ -97,7 +97,7 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
             name="company"
             value={form.company}
             onChange={handleChange}
-            placeholder="Acme Corp."
+            placeholder="TATA Consultancy Services"
           />
         </FieldGroup>
 
@@ -113,7 +113,7 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
 
         <FieldGroup label="Lead Source">
           <select className="input-field" name="source" value={form.source} onChange={handleChange}>
-            {SOURCES.map((s) => <option key={s} value={s} style={{ background: '#121A2A' }}>{s}</option>)}
+            {SOURCES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </FieldGroup>
       </div>
@@ -122,15 +122,15 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FieldGroup label="Service Interested In">
           <select className="input-field" name="service" value={form.service} onChange={handleChange}>
-            <option value="" style={{ background: '#121A2A' }}>Select a service...</option>
-            {SERVICES.map((s) => <option key={s} value={s} style={{ background: '#121A2A' }}>{s}</option>)}
+            <option value="">Select a service...</option>
+            {SERVICES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </FieldGroup>
 
         <FieldGroup label="Budget Range">
           <select className="input-field" name="budget" value={form.budget} onChange={handleChange}>
-            <option value="" style={{ background: '#121A2A' }}>Select budget...</option>
-            {BUDGETS.map((b) => <option key={b} value={b} style={{ background: '#121A2A' }}>{b}</option>)}
+            <option value="">Select budget...</option>
+            {BUDGETS.map((b) => <option key={b} value={b}>{b}</option>)}
           </select>
         </FieldGroup>
       </div>
@@ -139,13 +139,13 @@ const LeadForm = ({ initialData = {}, onSubmit, onCancel, loading = false }) => 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <FieldGroup label="Priority Level">
           <select className="input-field" name="priority" value={form.priority} onChange={handleChange}>
-            {PRIORITIES.map((p) => <option key={p} value={p} style={{ background: '#121A2A' }}>{p}</option>)}
+            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </FieldGroup>
 
         <FieldGroup label="Status">
           <select className="input-field" name="status" value={form.status} onChange={handleChange}>
-            {STATUSES.map((s) => <option key={s} value={s} style={{ background: '#121A2A' }}>{s}</option>)}
+            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
         </FieldGroup>
       </div>

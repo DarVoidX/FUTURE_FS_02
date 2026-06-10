@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Loader2, Eye, GitBranch, ExternalLink } from 'lucide-react';
+import { Plus, Loader2, ExternalLink } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
@@ -13,93 +13,86 @@ import toast from 'react-hot-toast';
 
 const STAGES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Converted', 'Lost'];
 
-const stageColors = {
-  New: { color: '#3B82F6', bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)' },
-  Contacted: { color: '#F59E0B', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)' },
-  Qualified: { color: '#00E5FF', bg: 'rgba(0,229,255,0.1)', border: 'rgba(0,229,255,0.3)' },
-  'Proposal Sent': { color: '#7C3AED', bg: 'rgba(124,58,237,0.1)', border: 'rgba(124,58,237,0.3)' },
-  Converted: { color: '#22C55E', bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.3)' },
-  Lost: { color: '#EF4444', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)' },
+const STAGE_CONFIG = {
+  New:            { color: 'var(--color-blue)', dim: 'var(--color-blue-dim)',  border: 'var(--border-color)'  },
+  Contacted:      { color: 'var(--color-warning)', dim: 'var(--color-warning-dim)', border: 'var(--border-color)'  },
+  Qualified:      { color: 'var(--color-purple)', dim: 'var(--color-purple-dim)', border: 'var(--border-color)'  },
+  'Proposal Sent':{ color: 'var(--color-teal)', dim: 'var(--color-teal-dim)', border: 'var(--border-color)' },
+  Converted:      { color: 'var(--color-success)', dim: 'var(--color-success-dim)', border: 'var(--border-color)'  },
+  Lost:           { color: 'var(--color-danger)', dim: 'var(--color-danger-dim)', border: 'var(--border-color)' },
 };
 
-const priorityDots = {
-  Low: '#94A3B8',
-  Medium: '#F59E0B',
-  High: '#EF4444',
-  Urgent: '#FF4D4D',
-};
+const PRIORITY_DOT = { Low: 'var(--text-muted)', Medium: 'var(--color-warning)', High: 'var(--color-danger)', Urgent: 'var(--color-danger)' };
 
-const LeadCard = ({ lead, index, onClick }) => {
+/* ─── Lead Card ─── */
+const LeadCard = ({ lead, index, onView }) => {
+  const cfg = STAGE_CONFIG[lead.status] || STAGE_CONFIG.New;
+
   return (
     <Draggable draggableId={lead._id} index={index}>
-      {(provided, snapshot) => (
+      {(prov, snap) => (
         <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          style={{
-            ...provided.draggableProps.style,
-            opacity: snapshot.isDragging ? 0.9 : 1,
-          }}
+          ref={prov.innerRef}
+          {...prov.draggableProps}
+          {...prov.dragHandleProps}
+          style={{ ...prov.draggableProps.style }}
         >
           <motion.div
             layout
-            className="rounded-xl p-4 cursor-grab active:cursor-grabbing group"
+            className="pipeline-card group mb-3 relative overflow-hidden"
             style={{
-              background: snapshot.isDragging ? 'rgba(18, 26, 42, 0.98)' : 'rgba(18, 26, 42, 0.9)',
-              border: snapshot.isDragging
-                ? '1px solid rgba(0, 229, 255, 0.4)'
-                : '1px solid rgba(255, 255, 255, 0.08)',
-              boxShadow: snapshot.isDragging
-                ? '0 16px 48px rgba(0,0,0,0.6), 0 0 20px rgba(0,229,255,0.15)'
-                : '0 4px 16px rgba(0,0,0,0.3)',
-              backdropFilter: 'blur(12px)',
+              borderLeft: `4px solid ${cfg.color}`,
+              paddingLeft: '14px',
+              ...(snap.isDragging ? {
+                border: `1px solid ${cfg.color}`,
+                borderLeft: `4px solid ${cfg.color}`,
+                boxShadow: 'var(--shadow-hover), 0 0 0 1px rgba(0,0,0,0.08)',
+                transform: 'rotate(1.5deg)',
+              } : {})
             }}
           >
-            {/* Card Header */}
+            {/* Priority dot */}
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                  style={{ background: 'linear-gradient(135deg, #00E5FF22, #7C3AED22)', border: '1px solid rgba(0,229,255,0.2)', color: '#00E5FF' }}
-                >
-                  {lead.fullName[0]}
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-white leading-tight line-clamp-1">{lead.fullName}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div
-                  className="w-2 h-2 rounded-full"
-                  title={lead.priority}
-                  style={{ background: priorityDots[lead.priority] || '#94A3B8' }}
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: PRIORITY_DOT[lead.priority] || 'var(--text-muted)' }}
                 />
-                <button
-                  onClick={(e) => { e.stopPropagation(); onClick(lead); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-lg flex items-center justify-center"
-                  style={{ background: 'rgba(0,229,255,0.1)', color: '#00E5FF' }}
-                >
-                  <ExternalLink size={11} />
-                </button>
+                <span className="text-[11px] font-bold" style={{ color: 'var(--text-secondary)' }}>
+                  {lead.priority}
+                </span>
               </div>
+              <button
+                onClick={e => { e.stopPropagation(); onView(lead); }}
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 rounded-lg flex items-center justify-center animate-pulse"
+                style={{ background: 'var(--background-cream)', color: 'var(--text-secondary)' }}
+              >
+                <ExternalLink size={11} />
+              </button>
             </div>
 
-            {/* Company */}
-            {lead.company && (
-              <p className="text-xs mb-2 line-clamp-1" style={{ color: '#64748B' }}>{lead.company}</p>
-            )}
+            {/* Name */}
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="w-6.5 h-6.5 rounded-lg flex items-center justify-center text-[11px] font-extrabold flex-shrink-0"
+                style={{ background: `${cfg.color}15`, color: cfg.color }}>
+                {(lead.fullName || '?')[0]}
+              </div>
+              <p className="text-[15px] font-bold text-text-1 leading-tight tracking-snug-2 truncate">
+                {lead.fullName || 'Unnamed Lead'}
+              </p>
+            </div>
 
-            {/* Service */}
-            {lead.service && (
-              <p className="text-xs mb-3 line-clamp-1" style={{ color: '#94A3B8' }}>{lead.service}</p>
+            {/* Company / Service */}
+            {lead.company && (
+              <p className="text-sm mb-3 truncate" style={{ color: 'var(--text-secondary)' }}>{lead.company}</p>
             )}
 
             {/* Footer */}
-            <div className="flex items-center justify-between">
-              <Badge type="source" value={lead.source} className="text-[10px] px-2 py-0.5" />
+            <div className="flex items-center justify-between pt-2.5"
+              style={{ borderTop: '1px solid var(--border-color)' }}>
+              <Badge type="source" value={lead.source} />
               {lead.budget && (
-                <span className="text-[10px]" style={{ color: '#64748B' }}>{lead.budget}</span>
+                <span className="text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>{lead.budget}</span>
               )}
             </div>
           </motion.div>
@@ -109,164 +102,150 @@ const LeadCard = ({ lead, index, onClick }) => {
   );
 };
 
+/* ─── Pipeline Page ─── */
 const Pipeline = () => {
-  const [columns, setColumns] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [columns, setColumns]       = useState({});
+  const [loading, setLoading]       = useState(true);
+  const [showForm, setShowForm]     = useState(false);
   const [formLoading, setFormLoading] = useState(false);
-  const { addNotification } = useNotifications();
-  const navigate = useNavigate();
+  const { addNotification }         = useNotifications();
+  const navigate                    = useNavigate();
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getLeads({ limit: 200 });
-      const leads = data.data || [];
-
       const grouped = {};
-      STAGES.forEach((s) => (grouped[s] = []));
-      leads.forEach((lead) => {
-        if (grouped[lead.status]) {
-          grouped[lead.status].push(lead);
-        }
-      });
+      STAGES.forEach(s => (grouped[s] = []));
+      (data.data || []).forEach(lead => { if (grouped[lead.status]) grouped[lead.status].push(lead); });
       setColumns(grouped);
-    } catch (err) {
-      toast.error('Failed to load pipeline');
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error('Failed to load pipeline'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchLeads(); }, [fetchLeads]);
 
-  const handleDragEnd = async (result) => {
-    const { source, destination, draggableId } = result;
-    if (!destination) return;
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+  const handleDragEnd = async ({ source, destination, draggableId }) => {
+    if (!destination || source.droppableId === destination.droppableId) return;
+    const from = source.droppableId, to = destination.droppableId;
 
-    const sourceStage = source.droppableId;
-    const destStage = destination.droppableId;
-
-    // Optimistic update
-    const newColumns = { ...columns };
-    const [moved] = newColumns[sourceStage].splice(source.index, 1);
-    moved.status = destStage;
-    newColumns[destStage].splice(destination.index, 0, moved);
-    setColumns({ ...newColumns });
+    const next = { ...columns };
+    const [moved] = next[from].splice(source.index, 1);
+    moved.status = to;
+    next[to].splice(destination.index, 0, moved);
+    setColumns({ ...next });
 
     try {
-      await updateLead(draggableId, { status: destStage });
-      if (destStage === 'Converted') {
-        toast.success(`🎉 ${moved.fullName} converted to client!`);
-        addNotification({ title: 'Lead Converted! 🎉', message: `${moved.fullName} has been converted!`, icon: '🎉' });
-      } else {
-        toast.success(`Lead moved to ${destStage}`);
-        addNotification({ title: 'Status Updated', message: `${moved.fullName} moved to ${destStage}`, icon: '📋' });
-      }
-    } catch (err) {
-      toast.error('Failed to update lead status');
-      fetchLeads(); // Revert on error
-    }
+      await updateLead(draggableId, { status: to });
+      toast.success(to === 'Converted' ? `🎉 ${moved.fullName} converted!` : `Moved to ${to}`);
+      if (to === 'Converted') addNotification({ title: 'Lead Converted!', message: moved.fullName, icon: '🎉' });
+    } catch { toast.error('Failed to move'); fetchLeads(); }
   };
 
-  const handleCreate = async (formData) => {
+  const handleCreate = async fd => {
     setFormLoading(true);
     try {
-      await createLead(formData);
-      toast.success('Lead created!');
-      addNotification({ title: 'New Lead', message: `${formData.fullName} added to pipeline`, icon: '👤' });
-      setShowForm(false);
-      fetchLeads();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create lead');
-    } finally {
-      setFormLoading(false);
-    }
+      await createLead(fd);
+      toast.success('Lead created');
+      setShowForm(false); fetchLeads();
+    } catch(err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setFormLoading(false); }
   };
 
+  const getStageBudgetSum = (stageLeads) => {
+    const sum = stageLeads.reduce((acc, lead) => {
+      if (!lead.budget) return acc;
+      const num = parseInt(lead.budget.replace(/[^0-9]/g, ''), 10);
+      return acc + (isNaN(num) ? 0 : num);
+    }, 0);
+    if (sum === 0) return null;
+    return sum >= 100000 ? `₹${(sum / 100000).toFixed(1)}L` : sum >= 1000 ? `₹${(sum / 1000).toFixed(0)}k` : `₹${sum}`;
+  };
+
+  const totalLeads = Object.values(columns).reduce((s, arr) => s + arr.length, 0);
+
   return (
-    <Layout pageTitle="Pipeline">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-white">Sales Pipeline</h2>
-            <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>
-              Drag and drop leads between stages
-            </p>
-          </div>
-          <button onClick={() => setShowForm(true)} className="btn-primary" id="pipeline-add-lead-btn">
-            <Plus size={16} /> Add Lead
+    <Layout pageTitle="Pipeline" pageSubtitle={`${totalLeads} total leads across ${STAGES.length} stages`}>
+      <div className="space-y-5">
+        {/* Toolbar */}
+        <div className="flex items-center justify-end">
+          <button onClick={() => setShowForm(true)} className="btn-primary">
+            <Plus size={15} /> New lead
           </button>
         </div>
 
         {loading ? (
           <div className="flex items-center justify-center py-32">
-            <Loader2 size={32} className="animate-spin" style={{ color: '#00E5FF' }} />
+            <Loader2 size={22} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
           </div>
         ) : (
           <DragDropContext onDragEnd={handleDragEnd}>
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-4" style={{ minWidth: 'max-content' }}>
-                {STAGES.map((stage) => {
-                  const config = stageColors[stage];
+                {STAGES.map(stage => {
+                  const cfg = STAGE_CONFIG[stage];
                   const leads = columns[stage] || [];
+                  const budgetSum = getStageBudgetSum(leads);
+
                   return (
-                    <div key={stage} className="pipeline-column" style={{ width: 280 }}>
+                    <div key={stage} className="pipeline-col">
                       {/* Column header */}
-                      <div
-                        className="flex items-center justify-between px-4 py-3 rounded-t-2xl"
-                        style={{
-                          background: config.bg,
-                          borderBottom: `1px solid ${config.border}`,
-                        }}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full"
-                            style={{ background: config.color, boxShadow: `0 0 8px ${config.color}` }}
-                          />
-                          <span className="text-sm font-semibold" style={{ color: config.color }}>
-                            {stage}
+                      <div className="px-4 pt-4 pb-3 rounded-t-[20px] relative overflow-hidden"
+                        style={{ borderTop: `4px solid ${cfg.color}` }}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-text-1">
+                              {stage}
+                            </span>
+                          </div>
+                          <span
+                            className="text-[11px] font-bold px-2 py-0.5 rounded-full tabular-nums"
+                            style={{ background: cfg.dim, color: cfg.color, border: `1px solid ${cfg.color}20` }}
+                          >
+                            {leads.length}
                           </span>
                         </div>
-                        <span
-                          className="text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: config.bg, color: config.color, border: `1px solid ${config.border}` }}
-                        >
-                          {leads.length}
-                        </span>
+                        {budgetSum && (
+                          <div className="text-xs font-bold text-text-3 tracking-snug flex items-center gap-1">
+                            <span>Total value:</span>
+                            <span className="text-text-2">{budgetSum}</span>
+                          </div>
+                        )}
                       </div>
 
-                      {/* Droppable area */}
+                      {/* Divider */}
+                      <div style={{ height: '1px', background: `linear-gradient(90deg, ${cfg.color}30, transparent)`, margin: '0 16px' }} />
+
+                      {/* Droppable */}
                       <Droppable droppableId={stage}>
-                        {(provided, snapshot) => (
+                        {(prov, snap) => (
                           <div
-                            ref={provided.innerRef}
-                            {...provided.droppableProps}
-                            className="flex-1 p-3 space-y-3 overflow-y-auto transition-colors duration-200"
+                            ref={prov.innerRef}
+                            {...prov.droppableProps}
+                            className="p-3 flex-1 overflow-y-auto no-scrollbar transition-colors duration-150"
                             style={{
-                              minHeight: 200,
-                              background: snapshot.isDraggingOver
-                                ? `rgba(${stage === 'Converted' ? '34,197,94' : '0,229,255'}, 0.03)`
-                                : 'transparent',
+                              minHeight: 380,
+                              background: snap.isDraggingOver ? `${cfg.dim}` : 'transparent',
+                              borderRadius: '0 0 20px 20px',
                             }}
                           >
-                            {leads.map((lead, index) => (
+                            {leads.map((lead, i) => (
                               <LeadCard
                                 key={lead._id}
                                 lead={lead}
-                                index={index}
-                                onClick={(l) => navigate(`/leads/${l._id}`)}
+                                index={i}
+                                onView={l => navigate(`/leads/${l._id}`)}
                               />
                             ))}
-                            {provided.placeholder}
+                            {prov.placeholder}
 
-                            {leads.length === 0 && !snapshot.isDraggingOver && (
-                              <div className="flex flex-col items-center justify-center py-8 text-center">
-                                <GitBranch size={20} className="mb-2 text-slate-700" />
-                                <p className="text-xs text-slate-600">Drop leads here</p>
+                            {leads.length === 0 && !snap.isDraggingOver && (
+                              <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                                  style={{ background: 'var(--background-darker-sand)', border: '1px solid var(--border-color)' }}>
+                                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: cfg.color, opacity: 0.5 }} />
+                                </div>
+                                <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Drop here</p>
                               </div>
                             )}
                           </div>
@@ -281,7 +260,7 @@ const Pipeline = () => {
         )}
       </div>
 
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add New Lead" size="lg">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="New Lead" size="lg">
         <LeadForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} loading={formLoading} />
       </Modal>
     </Layout>

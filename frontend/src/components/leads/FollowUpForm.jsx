@@ -38,7 +38,7 @@ const FollowUpForm = ({ leadId, onSubmit, loading = false }) => {
           className="input-field"
           value={form.nextFollowUpDate}
           onChange={(e) => setForm((prev) => ({ ...prev, nextFollowUpDate: e.target.value }))}
-          style={{ colorScheme: 'dark' }}
+          style={{ colorScheme: 'light' }}
         />
       </div>
 

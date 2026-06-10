@@ -2,36 +2,45 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, Search, Filter, Trash2, Edit3, Eye, ChevronLeft, ChevronRight,
-  ChevronDown, Loader2, Users, X
+  Plus, Search, SlidersHorizontal, Trash2, Pencil, Eye,
+  ChevronLeft, ChevronRight, ChevronDown, Loader2, Users, X,
+  TrendingUp, Target, Sparkles
 } from 'lucide-react';
 import Layout from '../components/layout/Layout';
 import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import LeadForm from '../components/leads/LeadForm';
-import { getLeads, createLead, updateLead, deleteLead } from '../api/leads';
+import { getLeads, createLead, updateLead, deleteLead, getAnalytics } from '../api/leads';
 import { useNotifications } from '../context/NotificationContext';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
-const STATUSES = ['New', 'Contacted', 'Qualified', 'Proposal Sent', 'Converted', 'Lost'];
-const SOURCES = ['Website', 'LinkedIn', 'Instagram', 'Referral', 'Email Campaign', 'Facebook', 'Cold Outreach'];
-const PRIORITIES = ['Low', 'Medium', 'High', 'Urgent'];
+const STATUSES  = ['New','Contacted','Qualified','Proposal Sent','Converted','Lost'];
+const SOURCES   = ['Website','LinkedIn','Instagram','Referral','Email Campaign','Facebook','Cold Outreach'];
+const PRIORITIES = ['Low','Medium','High','Urgent'];
 
 const Leads = () => {
-  const [leads, setLeads] = useState([]);
-  const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
-  const [loading, setLoading] = useState(true);
+  const [leads, setLeads]         = useState([]);
+  const [pagination, setPagination] = useState({ total:0, page:1, pages:1 });
+  const [loading, setLoading]     = useState(true);
   const [formLoading, setFormLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editLead, setEditLead] = useState(null);
-  const [deleteId, setDeleteId] = useState(null);
+  const [showForm, setShowForm]   = useState(false);
+  const [editLead, setEditLead]   = useState(null);
+  const [deleteId, setDeleteId]   = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [search, setSearch] = useState('');
-  const [filters, setFilters] = useState({ status: '', source: '', priority: '', startDate: '', endDate: '' });
-  const [page, setPage] = useState(1);
-  const { addNotification } = useNotifications();
-  const navigate = useNavigate();
+  const [search, setSearch]       = useState('');
+  const [filters, setFilters]     = useState({ status:'', source:'', priority:'', startDate:'', endDate:'' });
+  const [page, setPage]           = useState(1);
+  const [analytics, setAnalytics] = useState(null);
+  const { addNotification }       = useNotifications();
+  const navigate                  = useNavigate();
+
+  const fetchAnalytics = useCallback(async () => {
+    try {
+      const data = await getAnalytics();
+      setAnalytics(data.data);
+    } catch {}
+  }, []);
 
   const fetchLeads = useCallback(async () => {
     setLoading(true);
@@ -40,369 +49,338 @@ const Leads = () => {
       if (search) params.search = search;
       const data = await getLeads(params);
       setLeads(data.data || []);
-      setPagination(data.pagination || { total: 0, page: 1, pages: 1 });
-    } catch (err) {
-      toast.error('Failed to load leads');
-    } finally {
-      setLoading(false);
-    }
+      setPagination(data.pagination || { total:0, page:1, pages:1 });
+    } catch { toast.error('Failed to load leads'); }
+    finally { setLoading(false); }
   }, [page, search, filters]);
 
-  useEffect(() => { fetchLeads(); }, [fetchLeads]);
+  useEffect(() => {
+    fetchLeads();
+    fetchAnalytics();
+  }, [fetchLeads, fetchAnalytics]);
 
-  const handleCreate = async (formData) => {
+  const handleCreate = async fd => {
     setFormLoading(true);
     try {
-      const data = await createLead(formData);
-      toast.success('Lead created successfully! ✨');
-      addNotification({ title: 'New Lead Added', message: `${formData.fullName} from ${formData.company || formData.email}`, icon: '👤' });
-      setShowForm(false);
-      fetchLeads();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to create lead');
-    } finally {
-      setFormLoading(false);
-    }
+      await createLead(fd);
+      toast.success('Lead created');
+      addNotification({ title: 'New Lead', message: `${fd.fullName} added`, icon: '👤' });
+      setShowForm(false); fetchLeads(); fetchAnalytics();
+    } catch(err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setFormLoading(false); }
   };
 
-  const handleUpdate = async (formData) => {
+  const handleUpdate = async fd => {
     setFormLoading(true);
     try {
-      await updateLead(editLead._id, formData);
-      toast.success('Lead updated successfully!');
-      if (formData.status === 'Converted') {
-        addNotification({ title: 'Lead Converted! 🎉', message: `${editLead.fullName} has been converted to a client!`, icon: '🎉' });
-      }
-      setEditLead(null);
-      fetchLeads();
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to update lead');
-    } finally {
-      setFormLoading(false);
-    }
+      await updateLead(editLead._id, fd);
+      toast.success('Lead updated');
+      if (fd.status === 'Converted') addNotification({ title: 'Lead Converted! 🎉', message: editLead.fullName, icon: '🎉' });
+      setEditLead(null); fetchLeads(); fetchAnalytics();
+    } catch(err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setFormLoading(false); }
   };
 
   const handleDelete = async () => {
-    try {
-      await deleteLead(deleteId);
-      toast.success('Lead deleted');
-      setDeleteId(null);
-      fetchLeads();
-    } catch (err) {
-      toast.error('Failed to delete lead');
-    }
+    try { await deleteLead(deleteId); toast.success('Lead deleted'); setDeleteId(null); fetchLeads(); fetchAnalytics(); }
+    catch { toast.error('Failed to delete'); }
   };
 
-  const clearFilters = () => {
-    setFilters({ status: '', source: '', priority: '', startDate: '', endDate: '' });
-    setSearch('');
-    setPage(1);
-  };
-
-  const activeFiltersCount = Object.values(filters).filter(Boolean).length + (search ? 1 : 0);
+  const clearFilters = () => { setFilters({ status:'',source:'',priority:'',startDate:'',endDate:'' }); setSearch(''); setPage(1); };
+  const activeCount = Object.values(filters).filter(Boolean).length + (search ? 1 : 0);
 
   return (
-    <Layout pageTitle="Leads">
+    <Layout pageTitle="Leads" pageSubtitle={`${pagination.total} total records`}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-white">Lead Management</h2>
-            <p className="text-sm mt-0.5" style={{ color: '#94A3B8' }}>
-              {pagination.total} total leads
-            </p>
+        {/* ─── Toolbar (Full Width) ─── */}
+        <div className="flex flex-wrap items-center gap-3 card p-4">
+          {/* Search */}
+          <div className="relative flex-1 min-w-48 max-w-xs">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-muted)' }} />
+            <input
+              value={search}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
+              placeholder="Search leads…"
+              className="input pl-9 pr-4 text-sm"
+            />
           </div>
+
+          {/* Filters toggle */}
           <button
-            onClick={() => setShowForm(true)}
-            className="btn-primary"
-            id="add-lead-btn"
+            onClick={() => setShowFilters(!showFilters)}
+            className="btn-secondary gap-2.5"
+            style={activeCount > 0 ? { color: 'var(--color-teal)', borderColor: 'rgba(46, 125, 114, 0.3)' } : {}}
           >
-            <Plus size={16} /> Add Lead
+            <SlidersHorizontal size={15} />
+            Filter
+            {activeCount > 0 && (
+              <span className="w-4 h-4 rounded-full text-[11px] font-bold flex items-center justify-center"
+                style={{ background: 'var(--color-teal)', color: '#fff' }}>{activeCount}</span>
+            )}
+            <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
           </button>
-        </div>
 
-        {/* Search + Filters */}
-        <div
-          className="rounded-2xl p-4"
-          style={{ background: 'rgba(18, 26, 42, 0.8)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          <div className="flex flex-wrap gap-3">
-            {/* Search */}
-            <div className="flex-1 min-w-48 relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-              <input
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                placeholder="Search by name, email, company..."
-                className="input-field pl-9 py-2.5"
-              />
-            </div>
-
-            {/* Filter toggle */}
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`btn-secondary items-center gap-2 ${activeFiltersCount > 0 ? 'border-accent/40 text-accent' : ''}`}
-              id="filter-btn"
-            >
-              <Filter size={15} />
-              Filters
-              {activeFiltersCount > 0 && (
-                <span className="w-5 h-5 rounded-full text-xs flex items-center justify-center font-bold"
-                  style={{ background: '#00E5FF', color: '#0A0F1C' }}>
-                  {activeFiltersCount}
-                </span>
-              )}
-              <ChevronDown size={14} className={`transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+          {activeCount > 0 && (
+            <button onClick={clearFilters} className="btn-ghost gap-2">
+              <X size={14} /> Clear
             </button>
-
-            {activeFiltersCount > 0 && (
-              <button onClick={clearFilters} className="btn-secondary items-center gap-2">
-                <X size={14} /> Clear
-              </button>
-            )}
-          </div>
-
-          {/* Filter panel */}
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mt-4 pt-4"
-                  style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div>
-                    <label className="label-field text-xs">Status</label>
-                    <select className="input-field py-2 text-sm"
-                      value={filters.status}
-                      onChange={(e) => { setFilters(f => ({ ...f, status: e.target.value })); setPage(1); }}>
-                      <option value="" style={{ background: '#121A2A' }}>All</option>
-                      {STATUSES.map(s => <option key={s} value={s} style={{ background: '#121A2A' }}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label-field text-xs">Source</label>
-                    <select className="input-field py-2 text-sm"
-                      value={filters.source}
-                      onChange={(e) => { setFilters(f => ({ ...f, source: e.target.value })); setPage(1); }}>
-                      <option value="" style={{ background: '#121A2A' }}>All</option>
-                      {SOURCES.map(s => <option key={s} value={s} style={{ background: '#121A2A' }}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label-field text-xs">Priority</label>
-                    <select className="input-field py-2 text-sm"
-                      value={filters.priority}
-                      onChange={(e) => { setFilters(f => ({ ...f, priority: e.target.value })); setPage(1); }}>
-                      <option value="" style={{ background: '#121A2A' }}>All</option>
-                      {PRIORITIES.map(p => <option key={p} value={p} style={{ background: '#121A2A' }}>{p}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="label-field text-xs">From Date</label>
-                    <input type="date" className="input-field py-2 text-sm"
-                      value={filters.startDate}
-                      onChange={(e) => { setFilters(f => ({ ...f, startDate: e.target.value })); setPage(1); }}
-                      style={{ colorScheme: 'dark' }} />
-                  </div>
-                  <div>
-                    <label className="label-field text-xs">To Date</label>
-                    <input type="date" className="input-field py-2 text-sm"
-                      value={filters.endDate}
-                      onChange={(e) => { setFilters(f => ({ ...f, endDate: e.target.value })); setPage(1); }}
-                      style={{ colorScheme: 'dark' }} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Table */}
-        <div
-          className="rounded-2xl overflow-hidden"
-          style={{ background: 'rgba(18, 26, 42, 0.8)', border: '1px solid rgba(255,255,255,0.06)' }}
-        >
-          {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 size={28} className="animate-spin" style={{ color: '#00E5FF' }} />
-            </div>
-          ) : leads.length === 0 ? (
-            <div className="text-center py-16">
-              <Users size={40} className="mx-auto mb-4 text-slate-600" />
-              <p className="text-base font-medium text-slate-400">No leads found</p>
-              <p className="text-sm mt-1 text-slate-500">
-                {activeFiltersCount > 0 ? 'Try adjusting your filters' : 'Add your first lead to get started'}
-              </p>
-              {activeFiltersCount === 0 && (
-                <button onClick={() => setShowForm(true)} className="btn-primary mt-4 mx-auto">
-                  <Plus size={14} /> Add Lead
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Lead</th>
-                    <th className="hidden sm:table-cell">Company</th>
-                    <th>Status</th>
-                    <th className="hidden md:table-cell">Priority</th>
-                    <th className="hidden lg:table-cell">Source</th>
-                    <th className="hidden lg:table-cell">Date</th>
-                    <th className="text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map((lead, i) => (
-                    <motion.tr
-                      key={lead._id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ delay: i * 0.03 }}
-                    >
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                            style={{ background: 'linear-gradient(135deg, #00E5FF22, #7C3AED22)', border: '1px solid rgba(0,229,255,0.2)', color: '#00E5FF' }}
-                          >
-                            {lead.fullName[0]}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-white">{lead.fullName}</p>
-                            <p className="text-xs" style={{ color: '#64748B' }}>{lead.email}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden sm:table-cell">
-                        <span className="text-sm text-slate-300">{lead.company || '—'}</span>
-                      </td>
-                      <td>
-                        <Badge type="status" value={lead.status} />
-                      </td>
-                      <td className="hidden md:table-cell">
-                        <Badge type="priority" value={lead.priority} />
-                      </td>
-                      <td className="hidden lg:table-cell">
-                        <Badge type="source" value={lead.source} />
-                      </td>
-                      <td className="hidden lg:table-cell">
-                        <span className="text-xs" style={{ color: '#64748B' }}>
-                          {format(new Date(lead.createdAt), 'MMM d, yyyy')}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => navigate(`/leads/${lead._id}`)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                            title="View"
-                            style={{ color: '#64748B' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,229,255,0.1)'; e.currentTarget.style.color = '#00E5FF'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}
-                          >
-                            <Eye size={15} />
-                          </button>
-                          <button
-                            onClick={() => setEditLead(lead)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                            title="Edit"
-                            style={{ color: '#64748B' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(245,158,11,0.1)'; e.currentTarget.style.color = '#F59E0B'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteId(lead._id)}
-                            className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-                            title="Delete"
-                            style={{ color: '#64748B' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#EF4444'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748B'; }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           )}
 
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between px-4 py-4"
-              style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-xs" style={{ color: '#64748B' }}>
-                Showing {(page - 1) * 15 + 1}–{Math.min(page * 15, pagination.total)} of {pagination.total}
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="btn-secondary py-1.5 px-3 text-xs disabled:opacity-40"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-xs text-slate-400">{page} / {pagination.pages}</span>
-                <button
-                  onClick={() => setPage(p => Math.min(pagination.pages, p + 1))}
-                  disabled={page === pagination.pages}
-                  className="btn-secondary py-1.5 px-3 text-xs disabled:opacity-40"
-                >
-                  <ChevronRight size={14} />
-                </button>
+          <div className="ml-auto">
+            <button onClick={() => setShowForm(true)} className="btn-primary">
+              <Plus size={15} /> New lead
+            </button>
+          </div>
+        </div>
+
+        {/* ─── Filter panel ─── */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="overflow-hidden"
+            >
+              <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {[
+                  { label: 'Status',   key: 'status',    opts: STATUSES  },
+                  { label: 'Source',   key: 'source',    opts: SOURCES   },
+                  { label: 'Priority', key: 'priority',  opts: PRIORITIES },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label className="input-label">{f.label}</label>
+                    <select className="input py-2 text-xs"
+                      value={filters[f.key]}
+                      onChange={e => { setFilters(p => ({ ...p, [f.key]: e.target.value })); setPage(1); }}>
+                      <option value="">All</option>
+                      {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                ))}
+                <div>
+                  <label className="input-label">From</label>
+                  <input type="date" className="input py-2 text-xs"
+                    value={filters.startDate}
+                    onChange={e => { setFilters(p => ({ ...p, startDate: e.target.value })); setPage(1); }}
+                    style={{ colorScheme: 'light' }} />
+                </div>
+                <div>
+                  <label className="input-label">To</label>
+                  <input type="date" className="input py-2 text-xs"
+                    value={filters.endDate}
+                    onChange={e => { setFilters(p => ({ ...p, endDate: e.target.value })); setPage(1); }}
+                    style={{ colorScheme: 'light' }} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ─── Main Grid: Table Left, Stats Right ─── */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+          {/* Table Container Column */}
+          <div className="lg:col-span-3 card overflow-hidden">
+            {loading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
+              </div>
+            ) : leads.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon"><Users size={18} style={{ color: 'var(--text-muted)' }} /></div>
+                <p className="text-sm font-semibold text-text-1">No leads found</p>
+                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {activeCount > 0 ? 'Try adjusting your filters' : 'Add your first lead to get started'}
+                </p>
+                {activeCount === 0 && (
+                  <button onClick={() => setShowForm(true)} className="btn-primary btn-sm mt-2">
+                    <Plus size={12} /> New lead
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th className="hidden sm:table-cell">Company</th>
+                      <th>Status</th>
+                      <th className="hidden md:table-cell">Priority</th>
+                      <th className="hidden lg:table-cell">Source</th>
+                      <th className="hidden lg:table-cell">Added</th>
+                      <th className="text-right pr-5">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead, i) => (
+                      <motion.tr
+                        key={lead._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: i * 0.025 }}
+                      >
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-xs font-semibold flex-shrink-0"
+                              style={{ background: 'var(--color-teal-dim)', color: 'var(--color-teal)', border: '1px solid var(--color-teal-dim)' }}>
+                              {(lead.fullName || '?')[0]}
+                            </div>
+                            <div>
+                              <p className="text-[15px] font-semibold text-text-1 tracking-snug-2">{lead.fullName || 'Unnamed Lead'}</p>
+                              <p className="text-xs mt-0.5" style={{ color: 'var(--text-secondary)' }}>{lead.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="hidden sm:table-cell">
+                          <span className="text-[15px]" style={{ color: 'var(--text-secondary)' }}>{lead.company || '—'}</span>
+                        </td>
+                        <td><Badge type="status" value={lead.status} /></td>
+                        <td className="hidden md:table-cell"><Badge type="priority" value={lead.priority} /></td>
+                        <td className="hidden lg:table-cell"><Badge type="source" value={lead.source} /></td>
+                        <td className="hidden lg:table-cell">
+                          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                            {format(new Date(lead.createdAt), 'MMM d, yyyy')}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-1 pr-1">
+                            {[
+                              { icon: Eye,    title: 'View',   action: () => navigate(`/leads/${lead._id}`), hoverColor: 'var(--color-teal)' },
+                              { icon: Pencil, title: 'Edit',   action: () => setEditLead(lead),              hoverColor: 'var(--color-warning)' },
+                              { icon: Trash2, title: 'Delete', action: () => setDeleteId(lead._id),           hoverColor: 'var(--color-danger)' },
+                            ].map(({ icon: Icon, title, action, hoverColor }) => (
+                              <button
+                                key={title}
+                                onClick={action}
+                                title={title}
+                                className="btn-icon btn-ghost"
+                                onMouseEnter={e => e.currentTarget.style.color = hoverColor}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                style={{ color: 'var(--text-muted)' }}
+                              >
+                                <Icon size={14} />
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination */}
+            {pagination.pages > 1 && (
+              <div className="flex items-center justify-between px-5 py-3.5"
+                style={{ borderTop: '1px solid var(--border-color)' }}>
+                <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                  {(page-1)*15+1}–{Math.min(page*15, pagination.total)} of {pagination.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p-1))}
+                    disabled={page === 1}
+                    className="btn-secondary btn-sm disabled:opacity-30"
+                  >
+                    <ChevronLeft size={13} />
+                  </button>
+                  <span className="text-xs px-2" style={{ color: 'var(--text-secondary)' }}>
+                    {page} / {pagination.pages}
+                  </span>
+                  <button
+                    onClick={() => setPage(p => Math.min(pagination.pages, p+1))}
+                    disabled={page === pagination.pages}
+                    className="btn-secondary btn-sm disabled:opacity-30"
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        {/* Right Column: Lead Summary & Stats */}
+        <div className="lg:col-span-1 space-y-5">
+          <div className="card p-5 space-y-5">
+            <div>
+              <p className="text-base font-bold text-text-1">Lead Summary</p>
+              <p className="text-xs text-text-muted mt-0.5">Real-time stats overview</p>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Total Leads */}
+              <div className="p-3.5 rounded-xl bg-[var(--background-cream)] border border-[var(--border-color)] flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-text-3 uppercase tracking-wider">Total Leads</p>
+                  <p className="text-2xl font-black font-display text-text-1 mt-1">{analytics?.totalLeads ?? pagination.total}</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--color-teal-dim)] border border-[var(--color-teal-dim)]">
+                  <Users size={18} style={{ color: 'var(--color-teal)' }} />
+                </div>
+              </div>
+
+              {/* Conversion Rate */}
+              <div className="p-3.5 rounded-xl bg-[var(--background-cream)] border border-[var(--border-color)] flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-text-3 uppercase tracking-wider">Conversion</p>
+                  <p className="text-2xl font-black font-display text-text-1 mt-1">{analytics?.conversionRate ?? 0}%</p>
+                </div>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--color-teal-dim)] border border-[var(--color-teal-dim)]">
+                  <TrendingUp size={18} style={{ color: 'var(--color-teal)' }} />
+                </div>
               </div>
             </div>
-          )}
+
+            {/* Status breakdown */}
+            {analytics?.pipeline && (
+              <div className="space-y-3 pt-3 border-t border-[var(--border-color)]">
+                <p className="text-xs font-bold text-text-3 uppercase tracking-wider">Pipeline Stages</p>
+                <div className="space-y-2.5">
+                  {Object.entries(analytics.pipeline).map(([stage, count]) => {
+                    const pct = analytics.totalLeads ? Math.round((count / analytics.totalLeads) * 100) : 0;
+                    return (
+                      <div key={stage} className="space-y-1">
+                        <div className="flex justify-between text-xs font-semibold">
+                          <span className="text-text-2">{stage}</span>
+                          <span className="text-text-1 font-bold">{count} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 rounded-full bg-black/5 dark:bg-white/5 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-[var(--color-teal)]"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
+    </div>
 
-      {/* Create Modal */}
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add New Lead" size="lg">
-        <LeadForm
-          onSubmit={handleCreate}
-          onCancel={() => setShowForm(false)}
-          loading={formLoading}
-        />
+      {/* Modals */}
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="New Lead" size="lg">
+        <LeadForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} loading={formLoading} />
       </Modal>
-
-      {/* Edit Modal */}
       <Modal isOpen={!!editLead} onClose={() => setEditLead(null)} title="Edit Lead" size="lg">
-        <LeadForm
-          initialData={editLead}
-          onSubmit={handleUpdate}
-          onCancel={() => setEditLead(null)}
-          loading={formLoading}
-        />
+        <LeadForm initialData={editLead} onSubmit={handleUpdate} onCancel={() => setEditLead(null)} loading={formLoading} />
       </Modal>
-
-      {/* Delete Confirm Modal */}
       <Modal isOpen={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Lead" size="sm">
-        <div className="text-center">
-          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)' }}>
-            <Trash2 size={24} style={{ color: '#EF4444' }} />
+        <div className="text-center py-2">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{ background: 'var(--color-danger-dim)', border: '1px solid rgba(239,68,68,0.2)' }}>
+            <Trash2 size={20} style={{ color: 'var(--color-danger)' }} />
           </div>
-          <p className="text-white font-medium">Delete this lead?</p>
-          <p className="text-sm mt-2" style={{ color: '#94A3B8' }}>
-            This action cannot be undone. All follow-ups will also be deleted.
-          </p>
+          <p className="text-sm font-semibold text-text-1 mb-1">Delete this lead?</p>
+          <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>This action cannot be undone.</p>
           <div className="flex gap-3 mt-6">
-            <button onClick={() => setDeleteId(null)} className="btn-secondary flex-1 justify-center">
-              Cancel
-            </button>
-            <button onClick={handleDelete} className="btn-danger flex-1 justify-center">
-              Delete
-            </button>
+            <button onClick={() => setDeleteId(null)} className="btn-secondary flex-1">Cancel</button>
+            <button onClick={handleDelete} className="btn-danger flex-1">Delete</button>
           </div>
         </div>
       </Modal>

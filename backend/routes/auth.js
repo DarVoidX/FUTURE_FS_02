@@ -106,6 +106,11 @@ router.put(
         return res.status(401).json({ message: 'Current password is incorrect' });
       }
 
+      // Disable password change for demo account
+      if (admin.username === 'admin') {
+        return res.status(403).json({ message: 'Password changes are disabled for the demo account.' });
+      }
+
       admin.password = newPassword;
       await admin.save();
 

@@ -1,53 +1,70 @@
-const statusConfig = {
-  New: { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)' },
-  Contacted: { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' },
-  Qualified: { color: '#00E5FF', bg: 'rgba(0, 229, 255, 0.15)', border: 'rgba(0, 229, 255, 0.3)' },
-  'Proposal Sent': { color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.15)', border: 'rgba(124, 58, 237, 0.3)' },
-  Converted: { color: '#22C55E', bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.3)' },
-  Lost: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)' },
+/* ─── Status configs ─── */
+const STATUS = {
+  New:            { cls: 'status-new',       dot: 'var(--color-blue)' },
+  Contacted:      { cls: 'status-contacted', dot: 'var(--color-warning)' },
+  Qualified:      { cls: 'status-qualified', dot: 'var(--color-purple)' },
+  'Proposal Sent':{ cls: 'status-proposal',  dot: 'var(--color-teal)' },
+  Converted:      { cls: 'status-converted', dot: 'var(--color-success)' },
+  Lost:           { cls: 'status-lost',      dot: 'var(--color-danger)' },
 };
 
-const priorityConfig = {
-  Low: { color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' },
-  Medium: { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' },
-  High: { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)' },
-  Urgent: { color: '#FF4D4D', bg: 'rgba(255, 77, 77, 0.2)', border: 'rgba(255, 77, 77, 0.4)' },
+const PRIORITY = {
+  Low:    { cls: 'priority-low',    dot: 'var(--text-muted)' },
+  Medium: { cls: 'priority-medium', dot: 'var(--color-warning)' },
+  High:   { cls: 'priority-high',   dot: 'var(--color-danger)' },
+  Urgent: { cls: 'priority-urgent', dot: 'var(--color-danger)' },
 };
 
-const sourceConfig = {
-  Website: { color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)' },
-  LinkedIn: { color: '#0077B5', bg: 'rgba(0, 119, 181, 0.15)', border: 'rgba(0, 119, 181, 0.3)' },
-  Instagram: { color: '#E1306C', bg: 'rgba(225, 48, 108, 0.15)', border: 'rgba(225, 48, 108, 0.3)' },
-  Referral: { color: '#22C55E', bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.3)' },
-  'Email Campaign': { color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' },
-  Facebook: { color: '#1877F2', bg: 'rgba(24, 119, 242, 0.15)', border: 'rgba(24, 119, 242, 0.3)' },
-  'Cold Outreach': { color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.15)', border: 'rgba(124, 58, 237, 0.3)' },
-  Other: { color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' },
+const SOURCE_COLOR = {
+  Website:         'var(--color-blue)',
+  LinkedIn:        'var(--color-purple)',
+  Instagram:       'var(--color-accent)',
+  Referral:        'var(--color-success)',
+  'Email Campaign':'var(--color-warning)',
+  Facebook:        'var(--color-blue)',
+  'Cold Outreach': 'var(--color-purple)',
+  Other:           'var(--text-muted)',
 };
 
 const Badge = ({ type = 'status', value, className = '' }) => {
   let config;
 
-  if (type === 'status') config = statusConfig[value];
-  else if (type === 'priority') config = priorityConfig[value];
-  else if (type === 'source') config = sourceConfig[value];
+  if (type === 'status') {
+    config = STATUS[value];
+    if (!config) config = { cls: 'priority-low', dot: '#9CA3AF' };
+    return (
+      <span className={`badge ${config.cls} ${className}`}>
+        <span className="badge-dot" style={{ background: config.dot }} />
+        {value}
+      </span>
+    );
+  }
 
-  if (!config) config = { color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)' };
+  if (type === 'priority') {
+    config = PRIORITY[value];
+    if (!config) config = { cls: 'priority-low', dot: '#9CA3AF' };
+    return (
+      <span className={`badge ${config.cls} ${className}`}>
+        {value === 'Urgent' && <span className="text-[10px] leading-none">●</span>}
+        {value}
+      </span>
+    );
+  }
 
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${className}`}
-      style={{
-        color: config.color,
-        background: config.bg,
-        border: `1px solid ${config.border}`,
-      }}
-    >
-      {type === 'priority' && value === 'Urgent' && <span className="mr-1 animate-pulse">🔴</span>}
-      {value}
-    </span>
-  );
+  if (type === 'source') {
+    const color = SOURCE_COLOR[value] || '#9CA3AF';
+    return (
+      <span
+        className={`badge ${className}`}
+        style={{ background: `${color}12`, color, border: `1px solid ${color}20` }}
+      >
+        {value}
+      </span>
+    );
+  }
+
+  return <span className={`badge priority-low ${className}`}>{value}</span>;
 };
 
-export { statusConfig, priorityConfig, sourceConfig };
+export { STATUS, PRIORITY, SOURCE_COLOR };
 export default Badge;

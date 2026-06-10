@@ -55,3 +55,7 @@ ehthumbs.db
 
 # Vite
 frontend/.vite/
+
+# About project text file
+about_project.txt
+
