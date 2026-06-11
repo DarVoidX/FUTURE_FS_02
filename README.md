@@ -1,5 +1,9 @@
 # ⚡ OrbitFlow CRM
 
+Future Interns Full Stack Web Development Internship
+
+Task 2 - Client Lead Management System (Mini CRM)
+
 > **Premium Lead Management & Client Conversion Platform**
 
 OrbitFlow CRM is a full-stack Customer Relationship Management (CRM) application designed for agencies, freelancers, and service-based businesses. It helps you track, manage, and convert leads through a visual Kanban pipeline and dynamic real-time charts.
